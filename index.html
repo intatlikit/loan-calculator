@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตารางผ่อนบ้าน</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222636;
+    --border: #2e3248;
+    --accent: #4f8ef7;
+    --accent2: #7fd4b8;
+    --text: #e8eaf6;
+    --muted: #7a82a6;
+    --danger: #f76f6f;
+    --positive: #7fd4b8;
+    --gold: #f0c060;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,142,247,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,142,247,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px 60px;
+  }
+
+  header {
+    margin-bottom: 36px;
+  }
+  .header-tag {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+  h1 span { color: var(--accent); }
+  .subtitle {
+    color: var(--muted);
+    margin-top: 8px;
+    font-size: 15px;
+    font-weight: 300;
+  }
+
+  /* Input panel */
+  .input-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .input-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), transparent);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  label {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 400;
+  }
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-wrap .unit {
+    position: absolute;
+    right: 14px;
+    color: var(--muted);
+    font-size: 13px;
+    pointer-events: none;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 48px 12px 16px;
+    color: var(--text);
+    font-size: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.5px;
+  }
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,142,247,0.15);
+  }
+  input[type="text"].no-unit { padding-right: 16px; }
+
+  /* Month/Year selects */
+  .select-group {
+    display: flex;
+    gap: 8px;
+  }
+  select {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 10px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a82a6' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+  select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,142,247,0.15);
+  }
+  select option { background: var(--surface2); color: var(--text); }
+
+  /* Summary cards */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+  }
+  .card.accent::after { background: var(--accent); }
+  .card.green::after { background: var(--accent2); }
+  .card.gold::after { background: var(--gold); }
+  .card.red::after { background: var(--danger); }
+  .card.purple::after { background: #b47ef7; }
+
+  .card-label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 6px;
+  }
+  .card-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .card.accent .card-value { color: var(--accent); }
+  .card.green .card-value { color: var(--accent2); }
+  .card.gold .card-value { color: var(--gold); }
+  .card.red .card-value { color: var(--danger); }
+  .card.purple .card-value { color: #b47ef7; }
+
+  /* Table */
+  .table-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .table-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .table-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+  }
+  .row-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .scroll-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 700px; }
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    padding: 12px 16px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 400;
+    text-align: right;
+    white-space: nowrap;
+  }
+  th:first-child { text-align: center; }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(46,50,72,0.5);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(79,142,247,0.05); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr.paid-off {
+    background: rgba(127,212,184,0.05);
+  }
+
+  td {
+    padding: 11px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    text-align: right;
+    color: var(--text);
+  }
+  td:first-child {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  td.interest-cell { color: var(--danger); }
+  td.principal-cell { color: var(--accent); }
+  td.balance-cell { color: var(--text); }
+  td.balance-zero { color: var(--accent2); font-weight: 600; }
+  td.date-cell { color: var(--muted); font-size: 13px; text-align: left; }
+
+  /* Inline editable payment */
+  .pay-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 400;
+    text-align: right;
+    width: 110px;
+    padding: 2px 4px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    border-radius: 4px 4px 0 0;
+  }
+  .pay-input:focus {
+    background: rgba(79,142,247,0.08);
+    border-bottom-color: var(--accent);
+  }
+  .pay-input.custom {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+  .pay-input.custom:focus {
+    background: rgba(240,192,96,0.08);
+  }
+  /* Rate inline input */
+  .rate-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    color: var(--danger);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 400;
+    text-align: right;
+    width: 60px;
+    padding: 2px 4px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    border-radius: 4px 4px 0 0;
+  }
+  .rate-input:focus {
+    background: rgba(247,111,111,0.08);
+    border-bottom-color: var(--danger);
+  }
+  .rate-input.custom {
+    color: #f0a060;
+    border-bottom-color: #f0a060;
+  }
+  .rate-input.custom:focus {
+    background: rgba(240,160,96,0.08);
+  }
+  td.rate-cell { position: relative; white-space: nowrap; }
+  td.pay-cell { position: relative; }
+  .reset-btn {
+    display: none;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .reset-btn:hover { color: var(--danger); }
+  td.pay-cell:hover .reset-btn.visible { display: block; }
+  td.rate-cell:hover .reset-btn.visible { display: block; }
+  
+  .badge-paid {
+    background: rgba(127,212,184,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(127,212,184,0.3);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* ── Profile bar ── */
+  .profile-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-bar::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #b47ef7, var(--accent), transparent);
+  }
+  .profile-bar-label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    white-space: nowrap;
+    margin-right: 4px;
+  }
+  .profile-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .profile-tab {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .profile-tab:hover { border-color: var(--accent); }
+  .profile-tab.active {
+    border-color: #b47ef7;
+    background: rgba(180,126,247,0.1);
+  }
+  .profile-tab-name {
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: none;
+    background: transparent;
+    outline: none;
+  }
+  .profile-tab.active .profile-tab-name { color: #b47ef7; }
+  .profile-tab-del {
+    padding: 6px 8px 6px 2px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .profile-tab-del:hover { color: var(--danger); }
+
+  .profile-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    white-space: nowrap;
+  }
+  .profile-btn:hover { border-color: var(--accent); background: rgba(79,142,247,0.08); }
+  .profile-btn.save-btn { border-color: var(--accent2); color: var(--accent2); }
+  .profile-btn.save-btn:hover { background: rgba(127,212,184,0.1); }
+  .profile-btn.new-btn { border-color: #b47ef7; color: #b47ef7; }
+  .profile-btn.new-btn:hover { background: rgba(180,126,247,0.1); }
+
+  .profile-save-group {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--accent2);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .profile-name-input {
+    background: var(--surface2);
+    border: none;
+    border-right: 1px solid var(--border);
+    border-radius: 0;
+    padding: 7px 12px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+    outline: none;
+    width: 150px;
+    letter-spacing: 0;
+  }
+  .profile-name-input::placeholder { color: var(--muted); font-weight: 400; }
+  .profile-name-input:focus { background: rgba(127,212,184,0.06); }
+  .profile-save-group .save-btn {
+    border: none;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  /* toast */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 600px) {
+    .input-panel { padding: 20px; }
+    .container { padding: 24px 16px 48px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-tag">// mortgage calculator</div>
+    <h1>ตารางผ่อน<span>บ้าน</span></h1>
+    <p class="subtitle">คำนวณตารางผ่อนชำระรายเดือนพร้อมดอกเบี้ย</p>
+  </header>
+
+  <!-- Profile bar -->
+  <div class="profile-bar">
+    <span class="profile-bar-label">โปรไฟล์</span>
+    <div class="profile-tabs" id="profileTabs"></div>
+    <div class="profile-save-group">
+      <input type="text" id="profileNameInput" class="profile-name-input" placeholder="ชื่อโปรไฟล์..." maxlength="40">
+      <button class="profile-btn save-btn" id="btnSave">💾 บันทึก</button>
+    </div>
+    <button class="profile-btn new-btn" id="btnNewProfile">＋ ใหม่</button>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <div class="input-panel">
+    <div class="field">
+      <label>เงินคงเหลือ (ยอดหนี้)</label>
+      <div class="input-wrap">
+        <input type="text" id="balance" placeholder="3,000,000" class="no-unit" inputmode="decimal">
+      </div>
+    </div>
+    <div class="field">
+      <label>จำนวนเงินต่องวด</label>
+      <div class="input-wrap">
+        <input type="text" id="payment" placeholder="18,000" class="no-unit" inputmode="decimal">
+      </div>
+    </div>
+    <div class="field">
+      <label>อัตราดอกเบี้ยต่อปี</label>
+      <div class="input-wrap">
+        <input type="text" id="rate" placeholder="5.00" inputmode="decimal">
+        <span class="unit">%</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>เดือน/ปีที่เริ่มผ่อน</label>
+      <div class="select-group">
+        <select id="startMonth">
+          <option value="0">มกราคม</option>
+          <option value="1">กุมภาพันธ์</option>
+          <option value="2">มีนาคม</option>
+          <option value="3">เมษายน</option>
+          <option value="4">พฤษภาคม</option>
+          <option value="5">มิถุนายน</option>
+          <option value="6">กรกฎาคม</option>
+          <option value="7">สิงหาคม</option>
+          <option value="8">กันยายน</option>
+          <option value="9">ตุลาคม</option>
+          <option value="10">พฤศจิกายน</option>
+          <option value="11">ธันวาคม</option>
+        </select>
+        <select id="startYear"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-row" id="summary" style="display:none">
+    <div class="card accent">
+      <div class="card-label">ยอดหนี้เริ่มต้น</div>
+      <div class="card-value" id="s-balance">—</div>
+    </div>
+    <div class="card gold">
+      <div class="card-label">ดอกเบี้ยรวมทั้งหมด</div>
+      <div class="card-value" id="s-totalint">—</div>
+    </div>
+    <div class="card green">
+      <div class="card-label">จำนวนงวดทั้งหมด</div>
+      <div class="card-value" id="s-months">—</div>
+    </div>
+    <div class="card red">
+      <div class="card-label">ยอดชำระรวม</div>
+      <div class="card-value" id="s-total">—</div>
+    </div>
+    <div class="card purple">
+      <div class="card-label">ผ่อนหมดภายใน</div>
+      <div class="card-value" id="s-enddate">—</div>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <div class="table-header">
+      <div class="table-title"><span class="dot"></span> รายละเอียดการผ่อนชำระ</div>
+      <div class="row-count" id="row-count">0 งวด</div>
+    </div>
+    <div class="scroll-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>งวดที่</th>
+            <th style="text-align:left">เดือน / ปี</th>
+            <th>ยอดเงินต้น (ก่อน)</th>
+            <th title="คลิกแก้ไขดอกเบี้ยแต่ละงวด">ดอกเบี้ย%/ปี ✎</th>
+            <th>ดอกเบี้ย</th>
+            <th>เงินต้น</th>
+            <th title="คลิกที่ตัวเลขเพื่อแก้ไขค่างวดแต่ละเดือน">ชำระงวด ✎</th>
+            <th>คงเหลือ</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <div class="empty-icon">🏠</div>
+                กรอกข้อมูลด้านบนเพื่อสร้างตาราง
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const THAI_MONTHS_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const LS_KEY = 'mortgage_profiles_v1';
+
+// ── State ──
+let customPayments = {};
+let customRates = {};
+let activeProfileId = null;
+
+// ── LocalStorage helpers ──
+function loadAllProfiles() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; }
+}
+function saveAllProfiles(profiles) {
+  localStorage.setItem(LS_KEY, JSON.stringify(profiles));
+}
+function genId() { return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6); }
+
+// ── Current form state → profile object ──
+function formToProfile(name) {
+  return {
+    id: activeProfileId || genId(),
+    name: name || 'โปรไฟล์',
+    balance: document.getElementById('balance').value,
+    payment: document.getElementById('payment').value,
+    rate: document.getElementById('rate').value,
+    startMonth: document.getElementById('startMonth').value,
+    startYear: document.getElementById('startYear').value,
+    customPayments: { ...customPayments },
+    customRates: { ...customRates },
+    savedAt: Date.now()
+  };
+}
+
+// ── Load profile → set form ──
+function applyProfile(p) {
+  document.getElementById('balance').value = p.balance || '';
+  document.getElementById('payment').value = p.payment || '';
+  document.getElementById('rate').value = p.rate || '';
+  document.getElementById('startMonth').value = p.startMonth ?? new Date().getMonth();
+  document.getElementById('startYear').value = p.startYear ?? new Date().getFullYear();
+  document.getElementById('profileNameInput').value = p.name || '';
+  customPayments = p.customPayments ? { ...p.customPayments } : {};
+  customRates = p.customRates ? { ...p.customRates } : {};
+  customPayments = Object.fromEntries(Object.entries(customPayments).map(([k,v])=>[+k,v]));
+  customRates = Object.fromEntries(Object.entries(customRates).map(([k,v])=>[+k,v]));
+  activeProfileId = p.id;
+  calculate();
+}
+
+// ── Render profile tabs ──
+function renderProfileTabs() {
+  const profiles = loadAllProfiles();
+  const tabs = document.getElementById('profileTabs');
+  tabs.innerHTML = '';
+  if (Object.keys(profiles).length === 0) {
+    tabs.innerHTML = `<span style="color:var(--muted);font-size:13px;padding:4px 4px">ยังไม่มีโปรไฟล์ที่บันทึก</span>`;
+    return;
+  }
+  Object.values(profiles).sort((a,b)=>a.savedAt-b.savedAt).forEach(p => {
+    const tab = document.createElement('div');
+    tab.className = 'profile-tab' + (p.id === activeProfileId ? ' active' : '');
+    tab.dataset.id = p.id;
+
+    const nameBtn = document.createElement('button');
+    nameBtn.className = 'profile-tab-name';
+    nameBtn.textContent = p.name;
+    nameBtn.title = p.name;
+    nameBtn.addEventListener('click', () => {
+      activeProfileId = p.id;
+      applyProfile(p);
+      renderProfileTabs();
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'profile-tab-del';
+    delBtn.textContent = '✕';
+    delBtn.title = 'ลบโปรไฟล์นี้';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteProfile(p.id);
+    });
+
+    tab.appendChild(nameBtn);
+    tab.appendChild(delBtn);
+    tabs.appendChild(tab);
+  });
+}
+
+// ── Save current state ──
+function saveProfile() {
+  const nameInput = document.getElementById('profileNameInput');
+  const profiles = loadAllProfiles();
+  const trimmed = nameInput.value.trim() || ('โปรไฟล์ ' + (Object.keys(profiles).length + 1));
+  nameInput.value = trimmed;
+
+  if (!activeProfileId) activeProfileId = genId();
+  const p = formToProfile(trimmed);
+  p.id = activeProfileId;
+  profiles[activeProfileId] = p;
+  saveAllProfiles(profiles);
+  renderProfileTabs();
+  showToast('💾 บันทึกแล้ว: ' + trimmed);
+}
+
+// ── New profile ──
+function newProfile() {
+  const profiles = loadAllProfiles();
+  const trimmed = 'โปรไฟล์ ' + (Object.keys(profiles).length + 1);
+  activeProfileId = genId();
+  customPayments = {};
+  customRates = {};
+  document.getElementById('balance').value = '';
+  document.getElementById('payment').value = '';
+  document.getElementById('rate').value = '';
+  document.getElementById('startMonth').value = new Date().getMonth();
+  document.getElementById('startYear').value = new Date().getFullYear();
+  document.getElementById('profileNameInput').value = trimmed;
+  const p = formToProfile(trimmed);
+  profiles[activeProfileId] = p;
+  saveAllProfiles(profiles);
+  renderProfileTabs();
+  calculate();
+  // Focus name input so user can rename immediately
+  const ni = document.getElementById('profileNameInput');
+  ni.focus();
+  ni.select();
+  showToast('✨ สร้างโปรไฟล์ใหม่');
+}
+
+// ── Delete confirmed ──
+function deleteProfile(id) {
+  const profiles = loadAllProfiles();
+  const name = profiles[id]?.name || '';
+  delete profiles[id];
+  saveAllProfiles(profiles);
+  if (activeProfileId === id) {
+    activeProfileId = null;
+    customPayments = {};
+    customRates = {};
+    const remaining = Object.values(profiles);
+    if (remaining.length > 0) {
+      const last = remaining.sort((a,b)=>b.savedAt-a.savedAt)[0];
+      applyProfile(last);
+    } else {
+      document.getElementById('balance').value = '';
+      document.getElementById('payment').value = '';
+      document.getElementById('rate').value = '';
+      document.getElementById('profileNameInput').value = '';
+      calculate();
+    }
+  }
+  renderProfileTabs();
+  showToast('🗑 ลบแล้ว: ' + name);
+}
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Profile button events ──
+document.getElementById('btnSave').addEventListener('click', saveProfile);
+document.getElementById('btnNewProfile').addEventListener('click', newProfile);
+document.getElementById('profileNameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); saveProfile(); }
+});
+
+// (year select populated in init section below)
+
+function fmt(n) {
+  if (n === null || isNaN(n)) return '—';
+  const fixed = Number(n.toFixed(2));
+  const parts = fixed.toString().split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.length > 1 ? parts.join('.') : parts[0];
+}
+
+function parse(str) {
+  return parseFloat(String(str).replace(/,/g, '')) || 0;
+}
+
+function fmtInput(str) {
+  let raw = String(str).replace(/[^0-9.]/g, '');
+  const parts = raw.split('.');
+  if (parts.length > 2) raw = parts[0] + '.' + parts.slice(1).join('');
+  const dotIdx = raw.indexOf('.');
+  let intPart = dotIdx !== -1 ? raw.slice(0, dotIdx) : raw;
+  let decPart = dotIdx !== -1 ? raw.slice(dotIdx) : '';
+  intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return intPart + decPart;
+}
+
+function addMonths(month, year, offset) {
+  let m = month + offset;
+  let y = year + Math.floor(m / 12);
+  m = ((m % 12) + 12) % 12;
+  return { month: m, year: y };
+}
+
+// Attach numeric-only keydown to an input element
+function attachNumericKeydown(el) {
+  el.addEventListener('keydown', (e) => {
+    const allowed = ['Backspace','Delete','Tab','Escape','Enter','ArrowLeft','ArrowRight','Home','End'];
+    if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
+    if (!/^[0-9.]$/.test(e.key)) e.preventDefault();
+  });
+}
+
+// Main inputs
+['balance','payment','rate'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    let raw = el.value.replace(/[^0-9.]/g, '');
+    const pts = raw.split('.');
+    if (pts.length > 2) raw = pts[0] + '.' + pts.slice(1).join('');
+    const dotIdx = raw.indexOf('.');
+    let intPart = dotIdx !== -1 ? raw.slice(0, dotIdx) : raw;
+    let decPart = dotIdx !== -1 ? raw.slice(dotIdx) : '';
+    intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    el.value = intPart + decPart;
+    // ไม่ล้าง customPayments — แถวที่แก้แยกไว้คงค่าเดิม
+    calculate();
+  });
+  attachNumericKeydown(el);
+});
+
+['startMonth','startYear'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    // ไม่ล้าง customPayments เมื่อเปลี่ยนวันที่
+    calculate();
+  });
+});
+
+function calculate() {
+  const balance0 = parse(document.getElementById('balance').value);
+  const defaultPayment = parse(document.getElementById('payment').value);
+  const rate = parse(document.getElementById('rate').value);
+  const startMonth = parseInt(document.getElementById('startMonth').value);
+  const startYear = parseInt(document.getElementById('startYear').value);
+
+  const tbody = document.getElementById('tbody');
+  const summary = document.getElementById('summary');
+
+  if (!balance0 || !defaultPayment || !rate) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🏠</div>กรอกข้อมูลด้านบนเพื่อสร้างตาราง</div></td></tr>`;
+    summary.style.display = 'none';
+    document.getElementById('row-count').textContent = '0 งวด';
+    return;
+  }
+
+  const monthlyRate = rate / 100 / 12;
+  const firstInterest = balance0 * monthlyRate;
+  if (defaultPayment <= firstInterest) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">⚠️</div>จำนวนเงินต่องวดน้อยกว่าหรือเท่ากับดอกเบี้ย<br>กรุณาเพิ่มจำนวนเงินต่องวด</div></td></tr>`;
+    summary.style.display = 'none';
+    return;
+  }
+
+  let rows = [];
+  let balance = balance0;
+  let totalInterest = 0;
+  let totalPaid = 0;
+  const MAX = 1200;
+
+  while (balance > 0.005 && rows.length < MAX) {
+    const idx = rows.length;
+    const d = addMonths(startMonth, startYear, idx);
+    // Use per-row rate if set, otherwise global default
+    const rowRate = customRates[idx] !== undefined ? customRates[idx] : rate;
+    const rowMonthlyRate = rowRate / 100 / 12;
+    const interest = balance * rowMonthlyRate;
+    let paid = customPayments[idx] !== undefined ? customPayments[idx] : defaultPayment;
+    if (paid > balance + interest) paid = balance + interest;
+    const principal = paid - interest;
+    const newBalance = balance - principal;
+    totalInterest += interest;
+    totalPaid += paid;
+    rows.push({
+      n: idx + 1,
+      idx,
+      month: d.month,
+      year: d.year,
+      before: balance,
+      interest,
+      principal,
+      paid,
+      balance: Math.max(0, newBalance),
+      isCustomPay: customPayments[idx] !== undefined,
+      isCustomRate: customRates[idx] !== undefined,
+      rowRate,
+      tooLow: paid <= interest
+    });
+    balance = Math.max(0, newBalance);
+  }
+
+  renderTable(rows, defaultPayment, rate);
+
+  const lastRow = rows[rows.length - 1];
+  const endDateFull = `${THAI_MONTHS_FULL[lastRow.month]} ${lastRow.year + 543}`;
+
+  document.getElementById('s-balance').textContent = fmt(balance0);
+  document.getElementById('s-totalint').textContent = fmt(totalInterest);
+  document.getElementById('s-months').textContent = rows.length + ' งวด';
+  document.getElementById('s-total').textContent = fmt(totalPaid);
+  document.getElementById('s-enddate').textContent = endDateFull;
+  summary.style.display = 'grid';
+  document.getElementById('row-count').textContent = rows.length + ' งวด';
+}
+
+function renderTable(rows, defaultPayment, defaultRate) {
+  const tbody = document.getElementById('tbody');
+  let html = '';
+  rows.forEach(r => {
+    const isLast = r.balance < 0.01;
+    const dateStr = `${THAI_MONTHS[r.month]} ${r.year + 543}`;
+    const payClass = r.isCustomPay ? 'custom' : '';
+    const rateClass = r.isCustomRate ? 'custom' : '';
+    const resetPayVisible = r.isCustomPay ? 'visible' : '';
+    const resetRateVisible = r.isCustomRate ? 'visible' : '';
+    html += `<tr class="${isLast ? 'paid-off' : ''}" data-idx="${r.idx}">
+      <td>${r.n}</td>
+      <td class="date-cell">${dateStr}</td>
+      <td class="balance-cell">${fmt(r.before)}</td>
+      <td class="rate-cell">
+        <input class="rate-input ${rateClass}"
+          data-idx="${r.idx}"
+          value="${fmtInput(r.rowRate)}"
+          inputmode="decimal"
+          title="แก้ไขดอกเบี้ยงวดที่ ${r.n}">
+        <button class="reset-btn ${resetRateVisible}" data-type="rate" data-idx="${r.idx}" title="รีเซ็ตดอกเบี้ย">✕</button>
+      </td>
+      <td class="interest-cell">${fmt(r.interest)}</td>
+      <td class="principal-cell">${fmt(r.principal)}</td>
+      <td class="pay-cell">
+        <input class="pay-input ${payClass}"
+          data-idx="${r.idx}"
+          value="${fmtInput(r.paid)}"
+          inputmode="decimal"
+          title="แก้ไขค่างวดงวดที่ ${r.n}">
+        <button class="reset-btn ${resetPayVisible}" data-type="pay" data-idx="${r.idx}" title="รีเซ็ตค่างวด">✕</button>
+      </td>
+      <td class="${isLast ? 'balance-zero' : 'balance-cell'}">${isLast ? '<span class="badge-paid">PAID OFF</span>' : fmt(r.balance)}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+
+  // Helper: attach numeric keydown + format-while-typing + commit on blur/Enter
+  function attachInlineInput(input, onCommit) {
+    attachNumericKeydown(input);
+    input.addEventListener('input', () => {
+      let raw = input.value.replace(/[^0-9.]/g, '');
+      const pts = raw.split('.');
+      if (pts.length > 2) raw = pts[0] + '.' + pts.slice(1).join('');
+      const dotIdx = raw.indexOf('.');
+      let intPart = dotIdx !== -1 ? raw.slice(0, dotIdx) : raw;
+      let decPart = dotIdx !== -1 ? raw.slice(dotIdx) : '';
+      intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      input.value = intPart + decPart;
+    });
+    const commit = () => onCommit(parse(input.value));
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
+    input.addEventListener('focus', () => input.select());
+  }
+
+  // Pay inputs
+  tbody.querySelectorAll('.pay-input').forEach(input => {
+    attachInlineInput(input, (val) => {
+      const idx = parseInt(input.dataset.idx);
+      const defPay = parse(document.getElementById('payment').value);
+      if (!val || val === defPay) delete customPayments[idx];
+      else customPayments[idx] = val;
+      calculate();
+    });
+  });
+
+  // Rate inputs
+  tbody.querySelectorAll('.rate-input').forEach(input => {
+    attachInlineInput(input, (val) => {
+      const idx = parseInt(input.dataset.idx);
+      const defRate = parse(document.getElementById('rate').value);
+      if (!val || val === defRate) delete customRates[idx];
+      else customRates[idx] = val;
+      calculate();
+    });
+  });
+
+  // Reset buttons
+  tbody.querySelectorAll('.reset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      if (btn.dataset.type === 'rate') delete customRates[idx];
+      else delete customPayments[idx];
+      calculate();
+    });
+  });
+}
+
+// ── Init ──
+// Populate year select
+const yearSel = document.getElementById('startYear');
+const currentYear = new Date().getFullYear();
+for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+  const opt = document.createElement('option');
+  opt.value = y;
+  opt.textContent = y + 543;
+  if (y === currentYear) opt.selected = true;
+  yearSel.appendChild(opt);
+}
+document.getElementById('startMonth').value = new Date().getMonth();
+
+// Load last used profile if any
+(function initProfiles() {
+  const profiles = loadAllProfiles();
+  const all = Object.values(profiles).sort((a,b) => b.savedAt - a.savedAt);
+  if (all.length > 0) {
+    applyProfile(all[0]);
+  } else {
+    calculate();
+  }
+  renderProfileTabs();
+})();
+</script>
+</body>
+</html>
