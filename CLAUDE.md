@@ -20,10 +20,23 @@ Open `index.html` directly in a browser, or serve the folder statically (e.g. `n
 **Per-row overrides:** `customPayments` and `customRates` are objects keyed by the **0-based row index** (`idx`), not the displayed period number `n = idx + 1`. Inline inputs in the table write to these maps on blur/Enter. Entering the default value (or an empty value) deletes the override. The ✕ reset buttons also delete it. Overrides are deliberately kept when the main inputs or the start date change.
 
 **Profiles (localStorage):** all profiles are stored as one JSON object under the key `mortgage_profiles_v1`, as `{ [id]: profile }`. A profile holds the raw formatted input strings (`balance`, `payment`, `rate`), `startMonth`/`startYear`, copies of `customPayments`/`customRates`, and `savedAt`.
-- `activeProfileId` tracks the current profile. Saving is manual (the 💾 button or Enter in the name field). Edits are **not** auto-saved.
+- `activeProfileId` tracks the current profile.
+- The 💾 button (or Enter in the name field) saves immediately.
+- Autosave also runs `saveProfile({ silent: true })` 3s after the last edit (`scheduleAutosave()`). Any new user-edit handler must call `scheduleAutosave()`.
+- `flushAutosave()` saves pending edits right away. It runs before switching, creating, or deleting a profile, and when the page is hidden or closed. If you add another action that replaces the form, call `flushAutosave()` first.
+- Inline table cells commit only on blur or Enter, and only when the value changed. The 3s countdown starts from that commit, not from each keystroke.
 - JSON turns the override map keys into strings, so `applyProfile()` converts them back to numbers. Keep doing this if you touch that code.
 - On load, the profile with the latest `savedAt` is applied. Tabs are sorted by `savedAt` ascending.
 - If you change the profile shape in a way that isn't backward compatible, bump the `LS_KEY` version.
+
+**Supabase sync (optional, no login):** the app syncs only when `window.APP_CONFIG` provides `SUPABASE_URL` and `SUPABASE_ANON_KEY`. If they're missing, the sync bar stays hidden and the app runs local-only. supabase-js is loaded from jsdelivr.
+- `APP_CONFIG` is defined in `config.js`. Locally, `config.js` is gitignored; copy `config.example.js` to create it. On deploy, `.github/workflows/deploy.yml` generates `config.js` from the repo secrets `SUPABASE_URL` and `SUPABASE_ANON_KEY`, then publishes `index.html` and `config.js` to GitHub Pages. Never hard-code these values in `index.html`.
+- The schema is in `supabase/schema.sql`. The `mortgage_store` table has one row per sync key, and its `data` jsonb column holds the same object that is stored under `LS_KEY`.
+- The table has RLS enabled with no policies, so the anon role can't read or write it directly. All access goes through the `security definer` RPC functions `get_mortgage_store(p_key)` and `set_mortgage_store(p_key, p_data)`. Never add a table policy for anon: the anon key is public, so anyone could then read or overwrite every row.
+- Each browser generates a random 32-hex sync key once and stores it in `LS_SYNC_KEY`. That key is the only secret. The 🔑 button shows the key, and pasting another device's key switches this device to that key's data.
+- Supabase is the source of truth and localStorage is a cache. `saveAllProfiles()` writes to localStorage and then calls `pushRemote()`. `pushRemote()` queues uploads in order, and each upload sends the latest localStorage copy.
+- `LS_DIRTY_KEY` holds the sync key whose local changes haven't been uploaded yet.
+- On load, and whenever the key changes, `pullRemote()` replaces the local data with the cloud row. It uploads the local data instead in two cases: no row exists for that key yet, or an earlier upload with that key failed (the key is still in `LS_DIRTY_KEY`).
 
 **Dates and locale:** months are stored 0-based (JS convention). Years are stored as Gregorian years and shown in Buddhist Era (`year + 543`). The start-year `<select>` only contains the current year ±5. All UI text is in Thai.
 

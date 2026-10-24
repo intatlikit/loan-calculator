@@ -532,6 +532,25 @@
     margin: 0;
   }
 
+  /* ── Sync bar ── */
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .sync-bar[hidden] { display: none; }
+  .sync-status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .sync-status.ok { color: var(--positive); }
+  .sync-status.err { color: var(--danger); }
+
   /* toast */
   .toast {
     position: fixed;
@@ -566,6 +585,12 @@
     <h1>ตารางผ่อน<span>บ้าน</span></h1>
     <p class="subtitle">คำนวณตารางผ่อนชำระรายเดือนพร้อมดอกเบี้ย</p>
   </header>
+
+  <!-- Sync bar (hidden when Supabase is not configured) -->
+  <div class="sync-bar" id="syncBar" hidden>
+    <span class="sync-status" id="syncStatus"></span>
+    <button class="profile-btn" id="btnSyncKey" title="ใช้รหัสเดียวกันในอีกเครื่องเพื่อเห็นข้อมูลชุดเดียวกัน">🔑 รหัสซิงก์</button>
+  </div>
 
   <!-- Profile bar -->
   <div class="profile-bar">
@@ -680,23 +705,121 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
 <script>
-const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const THAI_MONTHS =['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const THAI_MONTHS_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const LS_KEY = 'mortgage_profiles_v1';
+const LS_DIRTY_KEY = 'mortgage_profiles_dirty'; // sync key whose local changes are not yet uploaded
+const LS_SYNC_KEY = 'mortgage_sync_key';
+
+// ── Supabase config ──
+// Values come from config.js (gitignored locally, generated from repo secrets on deploy).
+// Missing or empty → local-only. The anon key is public by design; rows are reachable only through
+// the get/set RPC functions with this browser's random sync key (see supabase/schema.sql).
+const { SUPABASE_URL = '', SUPABASE_ANON_KEY = '' } = window.APP_CONFIG || {};
+const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } })
+  : null;
 
 // ── State ──
 let customPayments = {};
 let customRates = {};
 let activeProfileId = null;
+let syncKey = null;
 
-// ── LocalStorage helpers ──
+// ── LocalStorage helpers (localStorage is the cache; Supabase is the source of truth when configured) ──
 function loadAllProfiles() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; }
 }
 function saveAllProfiles(profiles) {
   localStorage.setItem(LS_KEY, JSON.stringify(profiles));
+  if (syncKey) pushRemote();
 }
+
+// ── Supabase sync ──
+function genSyncKey() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Pushes are chained so they reach the server in order; each one uploads the latest localStorage copy.
+let pushChain = Promise.resolve();
+let pendingPushes = 0;
+function pushRemote() {
+  const key = syncKey;
+  localStorage.setItem(LS_DIRTY_KEY, key);
+  pendingPushes++;
+  setSyncStatus('กำลังซิงก์...');
+  pushChain = pushChain.then(async () => {
+    try {
+      if (syncKey !== key) return;
+      const { error } = await sb.rpc('set_mortgage_store', { p_key: key, p_data: loadAllProfiles() });
+      if (error) throw error;
+      if (pendingPushes === 1) {
+        localStorage.removeItem(LS_DIRTY_KEY);
+        setSyncStatus('☁ ซิงก์แล้ว', 'ok');
+      }
+    } catch (err) {
+      console.error(err);
+      setSyncStatus('⚠ ซิงก์ไม่สำเร็จ', 'err');
+    } finally {
+      pendingPushes--;
+    }
+  });
+}
+
+async function pullRemote(key) {
+  setSyncStatus('กำลังโหลด...');
+  const { data, error } = await sb.rpc('get_mortgage_store', { p_key: key });
+  if (syncKey !== key) return;
+  if (error) {
+    console.error(error);
+    setSyncStatus('⚠ โหลดจากคลาวด์ไม่สำเร็จ', 'err');
+    return;
+  }
+  if (data && localStorage.getItem(LS_DIRTY_KEY) !== key) {
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+    reloadFromStorage();
+    setSyncStatus('☁ ซิงก์แล้ว', 'ok');
+  } else {
+    // No cloud copy for this key yet, or an earlier upload with this key failed → upload local
+    pushRemote();
+  }
+}
+
+function setSyncStatus(msg, cls) {
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.className = 'sync-status' + (cls ? ' ' + cls : '');
+}
+
+// Show this browser's key; pasting another device's key switches to that device's data
+function changeSyncKey() {
+  const entered = prompt('รหัสซิงก์ของเครื่องนี้ — คัดลอกไปวางในอีกเครื่องเพื่อใช้ข้อมูลชุดเดียวกัน\n(ถ้าวางรหัสจากเครื่องอื่น ข้อมูลในเครื่องนี้จะถูกแทนที่ด้วยข้อมูลของรหัสนั้น)', syncKey);
+  if (entered === null) return;
+  const key = entered.trim();
+  if (key === syncKey) return;
+  if (key.length < 20) { showToast('⚠ รหัสต้องยาวอย่างน้อย 20 ตัวอักษร'); return; }
+  syncKey = key;
+  localStorage.setItem(LS_SYNC_KEY, key);
+  showToast('🔑 เปลี่ยนรหัสซิงก์แล้ว');
+  pullRemote(key);
+}
+
+function initCloud() {
+  if (!sb) return;
+  syncKey = localStorage.getItem(LS_SYNC_KEY);
+  if (!syncKey) {
+    syncKey = genSyncKey();
+    localStorage.setItem(LS_SYNC_KEY, syncKey);
+  }
+  document.getElementById('syncBar').hidden = false;
+  document.getElementById('btnSyncKey').addEventListener('click', changeSyncKey);
+  pullRemote(syncKey);
+}
+
 function genId() { return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6); }
 
 // ── Current form state → profile object ──
@@ -750,8 +873,9 @@ function renderProfileTabs() {
     nameBtn.textContent = p.name;
     nameBtn.title = p.name;
     nameBtn.addEventListener('click', () => {
+      flushAutosave();
       activeProfileId = p.id;
-      applyProfile(p);
+      applyProfile(loadAllProfiles()[p.id] || p); // re-read: the flush may have just updated it
       renderProfileTabs();
     });
 
@@ -771,7 +895,9 @@ function renderProfileTabs() {
 }
 
 // ── Save current state ──
-function saveProfile() {
+function saveProfile({ silent = false } = {}) {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = null;
   const nameInput = document.getElementById('profileNameInput');
   const profiles = loadAllProfiles();
   const trimmed = nameInput.value.trim() || ('โปรไฟล์ ' + (Object.keys(profiles).length + 1));
@@ -783,11 +909,25 @@ function saveProfile() {
   profiles[activeProfileId] = p;
   saveAllProfiles(profiles);
   renderProfileTabs();
-  showToast('💾 บันทึกแล้ว: ' + trimmed);
+  if (!silent) showToast('💾 บันทึกแล้ว: ' + trimmed);
+}
+
+// ── Autosave: save 3s after the user stops editing ──
+const AUTOSAVE_DELAY = 3000;
+let autosaveTimer = null;
+function scheduleAutosave() {
+  clearTimeout(autosaveTimer);
+  setSyncStatus('✎ รอบันทึก...');
+  autosaveTimer = setTimeout(() => saveProfile({ silent: true }), AUTOSAVE_DELAY);
+}
+// Save pending edits now (before switching profile or leaving the page)
+function flushAutosave() {
+  if (autosaveTimer) saveProfile({ silent: true });
 }
 
 // ── New profile ──
 function newProfile() {
+  flushAutosave();
   const profiles = loadAllProfiles();
   const trimmed = 'โปรไฟล์ ' + (Object.keys(profiles).length + 1);
   activeProfileId = genId();
@@ -813,6 +953,7 @@ function newProfile() {
 
 // ── Delete confirmed ──
 function deleteProfile(id) {
+  flushAutosave();
   const profiles = loadAllProfiles();
   const name = profiles[id]?.name || '';
   delete profiles[id];
@@ -848,11 +989,16 @@ function showToast(msg) {
 }
 
 // ── Profile button events ──
-document.getElementById('btnSave').addEventListener('click', saveProfile);
+document.getElementById('btnSave').addEventListener('click', () => saveProfile());
 document.getElementById('btnNewProfile').addEventListener('click', newProfile);
 document.getElementById('profileNameInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); saveProfile(); }
 });
+document.getElementById('profileNameInput').addEventListener('input', scheduleAutosave);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushAutosave();
+});
+window.addEventListener('pagehide', flushAutosave);
 
 // (year select populated in init section below)
 
@@ -909,6 +1055,7 @@ function attachNumericKeydown(el) {
     el.value = intPart + decPart;
     // ไม่ล้าง customPayments — แถวที่แก้แยกไว้คงค่าเดิม
     calculate();
+    scheduleAutosave();
   });
   attachNumericKeydown(el);
 });
@@ -917,6 +1064,7 @@ function attachNumericKeydown(el) {
   document.getElementById(id).addEventListener('change', () => {
     // ไม่ล้าง customPayments เมื่อเปลี่ยนวันที่
     calculate();
+    scheduleAutosave();
   });
 });
 
@@ -1046,7 +1194,8 @@ function renderTable(rows, defaultPayment, defaultRate) {
       intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       input.value = intPart + decPart;
     });
-    const commit = () => onCommit(parse(input.value));
+    const initial = input.value;
+    const commit = () => { if (input.value !== initial) onCommit(parse(input.value)); };
     input.addEventListener('blur', commit);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
     input.addEventListener('focus', () => input.select());
@@ -1060,6 +1209,7 @@ function renderTable(rows, defaultPayment, defaultRate) {
       if (!val || val === defPay) delete customPayments[idx];
       else customPayments[idx] = val;
       calculate();
+      scheduleAutosave();
     });
   });
 
@@ -1071,6 +1221,7 @@ function renderTable(rows, defaultPayment, defaultRate) {
       if (!val || val === defRate) delete customRates[idx];
       else customRates[idx] = val;
       calculate();
+      scheduleAutosave();
     });
   });
 
@@ -1081,6 +1232,7 @@ function renderTable(rows, defaultPayment, defaultRate) {
       if (btn.dataset.type === 'rate') delete customRates[idx];
       else delete customPayments[idx];
       calculate();
+      scheduleAutosave();
     });
   });
 }
@@ -1098,17 +1250,27 @@ for (let y = currentYear - 5; y <= currentYear + 5; y++) {
 }
 document.getElementById('startMonth').value = new Date().getMonth();
 
-// Load last used profile if any
-(function initProfiles() {
+// Re-apply the active profile (or the most recently saved one) from localStorage
+function reloadFromStorage() {
   const profiles = loadAllProfiles();
-  const all = Object.values(profiles).sort((a,b) => b.savedAt - a.savedAt);
-  if (all.length > 0) {
-    applyProfile(all[0]);
+  const p = profiles[activeProfileId] || Object.values(profiles).sort((a,b) => b.savedAt - a.savedAt)[0];
+  if (p) {
+    applyProfile(p);
   } else {
+    activeProfileId = null;
+    customPayments = {};
+    customRates = {};
+    document.getElementById('balance').value = '';
+    document.getElementById('payment').value = '';
+    document.getElementById('rate').value = '';
+    document.getElementById('profileNameInput').value = '';
     calculate();
   }
   renderProfileTabs();
-})();
+}
+
+reloadFromStorage();
+initCloud();
 </script>
 </body>
 </html>
