@@ -589,7 +589,6 @@
   <!-- Sync bar (hidden when Supabase is not configured) -->
   <div class="sync-bar" id="syncBar" hidden>
     <span class="sync-status" id="syncStatus"></span>
-    <button class="profile-btn" id="btnSyncKey" title="ใช้รหัสเดียวกันในอีกเครื่องเพื่อเห็นข้อมูลชุดเดียวกัน">🔑 รหัสซิงก์</button>
   </div>
 
   <!-- Profile bar -->
@@ -717,8 +716,9 @@ const LS_SYNC_KEY = 'mortgage_sync_key';
 // ── Supabase config ──
 // Values come from config.js (gitignored locally, generated from repo secrets on deploy).
 // Missing or empty → local-only. The anon key is public by design; rows are reachable only through
-// the get/set RPC functions with this browser's random sync key (see supabase/schema.sql).
-const { SUPABASE_URL = '', SUPABASE_ANON_KEY = '' } = window.APP_CONFIG || {};
+// the get/set RPC functions with the sync key (see supabase/schema.sql). SYNC_KEY makes every device
+// share one row; without it each browser generates its own random key.
+const { SUPABASE_URL = '', SUPABASE_ANON_KEY = '', SYNC_KEY = '' } = window.APP_CONFIG || {};
 const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } })
   : null;
@@ -795,29 +795,19 @@ function setSyncStatus(msg, cls) {
   el.className = 'sync-status' + (cls ? ' ' + cls : '');
 }
 
-// Show this browser's key; pasting another device's key switches to that device's data
-function changeSyncKey() {
-  const entered = prompt('รหัสซิงก์ของเครื่องนี้ — คัดลอกไปวางในอีกเครื่องเพื่อใช้ข้อมูลชุดเดียวกัน\n(ถ้าวางรหัสจากเครื่องอื่น ข้อมูลในเครื่องนี้จะถูกแทนที่ด้วยข้อมูลของรหัสนั้น)', syncKey);
-  if (entered === null) return;
-  const key = entered.trim();
-  if (key === syncKey) return;
-  if (key.length < 20) { showToast('⚠ รหัสต้องยาวอย่างน้อย 20 ตัวอักษร'); return; }
-  syncKey = key;
-  localStorage.setItem(LS_SYNC_KEY, key);
-  showToast('🔑 เปลี่ยนรหัสซิงก์แล้ว');
-  pullRemote(key);
-}
-
 function initCloud() {
   if (!sb) return;
-  syncKey = localStorage.getItem(LS_SYNC_KEY);
+  syncKey = SYNC_KEY || localStorage.getItem(LS_SYNC_KEY);
   if (!syncKey) {
     syncKey = genSyncKey();
     localStorage.setItem(LS_SYNC_KEY, syncKey);
   }
   document.getElementById('syncBar').hidden = false;
-  document.getElementById('btnSyncKey').addEventListener('click', changeSyncKey);
   pullRemote(syncKey);
+  // Pick up edits made on other devices when the user comes back to this tab
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !autosaveTimer && pendingPushes === 0) pullRemote(syncKey);
+  });
 }
 
 function genId() { return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6); }

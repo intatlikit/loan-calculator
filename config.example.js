@@ -2,5 +2,6 @@
 // Leave empty, or omit config.js entirely, to run local-only.
 window.APP_CONFIG = {
   SUPABASE_URL: '',       // e.g. 'https://xxxx.supabase.co'
-  SUPABASE_ANON_KEY: ''
+  SUPABASE_ANON_KEY: '',
+  SYNC_KEY: ''            // shared row for every device (>= 20 chars); empty → each browser gets its own random key
 };

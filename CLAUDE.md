@@ -30,13 +30,17 @@ Open `index.html` directly in a browser, or serve the folder statically (e.g. `n
 - If you change the profile shape in a way that isn't backward compatible, bump the `LS_KEY` version.
 
 **Supabase sync (optional, no login):** the app syncs only when `window.APP_CONFIG` provides `SUPABASE_URL` and `SUPABASE_ANON_KEY`. If they're missing, the sync bar stays hidden and the app runs local-only. supabase-js is loaded from jsdelivr.
-- `APP_CONFIG` is defined in `config.js`. Locally, `config.js` is gitignored; copy `config.example.js` to create it. On deploy, `.github/workflows/deploy.yml` generates `config.js` from the repo secrets `SUPABASE_URL` and `SUPABASE_ANON_KEY`, then publishes `index.html` and `config.js` to GitHub Pages. Never hard-code these values in `index.html`.
+- `APP_CONFIG` is defined in `config.js`. Locally, `config.js` is gitignored; copy `config.example.js` to create it. On deploy, `.github/workflows/deploy.yml` generates `config.js` from the repo secrets `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SYNC_KEY`, then publishes `index.html` and `config.js` to GitHub Pages. Never hard-code these values in `index.html`.
 - The schema is in `supabase/schema.sql`. The `mortgage_store` table has one row per sync key, and its `data` jsonb column holds the same object that is stored under `LS_KEY`.
 - The table has RLS enabled with no policies, so the anon role can't read or write it directly. All access goes through the `security definer` RPC functions `get_mortgage_store(p_key)` and `set_mortgage_store(p_key, p_data)`. Never add a table policy for anon: the anon key is public, so anyone could then read or overwrite every row.
-- Each browser generates a random 32-hex sync key once and stores it in `LS_SYNC_KEY`. That key is the only secret. The 🔑 button shows the key, and pasting another device's key switches this device to that key's data.
+- The sync key is the only secret.
+  - If `APP_CONFIG.SYNC_KEY` is set, every device uses that one key and so shares one row. Anyone who can open the deployed site can then read and edit that row.
+  - If it's not set, each browser generates a random 32-hex key once and stores it in `LS_SYNC_KEY`, so each browser has its own row.
+  - There is no UI to view or change the key.
+- `pullRemote()` also runs when the tab becomes visible again, unless an autosave or push is pending. That's how edits made on other devices show up. Sync is last-write-wins on the whole object; there is no per-profile merge.
 - Supabase is the source of truth and localStorage is a cache. `saveAllProfiles()` writes to localStorage and then calls `pushRemote()`. `pushRemote()` queues uploads in order, and each upload sends the latest localStorage copy.
 - `LS_DIRTY_KEY` holds the sync key whose local changes haven't been uploaded yet.
-- On load, and whenever the key changes, `pullRemote()` replaces the local data with the cloud row. It uploads the local data instead in two cases: no row exists for that key yet, or an earlier upload with that key failed (the key is still in `LS_DIRTY_KEY`).
+- On load, `pullRemote()` replaces the local data with the cloud row. It uploads the local data instead in two cases: no row exists for that key yet, or an earlier upload with that key failed (the key is still in `LS_DIRTY_KEY`).
 
 **Dates and locale:** months are stored 0-based (JS convention). Years are stored as Gregorian years and shown in Buddhist Era (`year + 543`). The start-year `<select>` only contains the current year ±5. All UI text is in Thai.
 
