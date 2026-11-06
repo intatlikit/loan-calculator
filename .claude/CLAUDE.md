@@ -22,9 +22,11 @@ Open `index.html` directly in a browser, or serve the folder statically (e.g. `n
 **Profiles (localStorage):** all profiles are stored as one JSON object under the key `mortgage_profiles_v1`, as `{ [id]: profile }`. A profile holds the raw formatted input strings (`balance`, `payment`, `rate`), `startMonth`/`startYear`, copies of `customPayments`/`customRates`, and `savedAt`.
 - `activeProfileId` tracks the current profile.
 - The 💾 button (or Enter in the name field) saves immediately.
-- Autosave also runs `saveProfile({ silent: true })` 3s after the last edit (`scheduleAutosave()`). Any new user-edit handler must call `scheduleAutosave()`.
-- `flushAutosave()` saves pending edits right away. It runs before switching, creating, or deleting a profile, and when the page is hidden or closed. If you add another action that replaces the form, call `flushAutosave()` first.
-- Inline table cells commit only on blur or Enter, and only when the value changed. The 3s countdown starts from that commit, not from each keystroke.
+- Autosave also runs `saveProfile({ silent: true })` 2s (`AUTOSAVE_DELAY`) after the last edit (`scheduleAutosave()`). Any new user-edit handler must call `scheduleAutosave()`.
+- `flushAutosave()` saves pending edits right away. It runs before switching, creating, copying, or deleting a profile, and when the page is hidden or closed. If you add another action that replaces the form, call `flushAutosave()` first.
+- The ⧉ button (`duplicateProfile()`) saves the current form as a new profile named `<name> Copied` and makes it active.
+- Deleting a profile asks first through `confirmDialog(msg)`, a custom modal that returns a Promise<boolean>. Use it for any new destructive action instead of `window.confirm`.
+- Inline table cells commit only on blur or Enter, and only when the value changed. The 2s countdown starts from that commit, not from each keystroke.
 - JSON turns the override map keys into strings, so `applyProfile()` converts them back to numbers. Keep doing this if you touch that code.
 - On load, the profile with the latest `savedAt` is applied. Tabs are sorted by `savedAt` ascending.
 - If you change the profile shape in a way that isn't backward compatible, bump the `LS_KEY` version.
